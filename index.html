@@ -16,9 +16,9 @@
       <div class="header-container">
         <h1 id="main-title">Pratilac suplemenata</h1>
         <div class="lang-switcher">
-          <button id="btn-sr" class="active">SR</button>
+          <button id="btn-sr" class="active" type="button">SR</button>
           <span>|</span>
-          <button id="btn-en">EN</button>
+          <button id="btn-en" type="button">EN</button>
         </div>
       </div>
     </header>
@@ -27,7 +27,9 @@
       <section class="input-section">
         <div class="input-group">
           <div class="field">
-            <label id="lbl-name" for="input-name">Naziv</label>
+            <label id="lbl-name" for="input-name" data-i18n="lblName"
+              >Naziv</label
+            >
             <input
               type="text"
               id="input-name"
@@ -36,7 +38,9 @@
             />
           </div>
           <div class="field">
-            <label id="lbl-dosage" for="input-dosage">Doza</label>
+            <label id="lbl-dosage" for="input-dosage" data-i18n="lblDosage"
+              >Doza</label
+            >
             <input
               type="text"
               id="input-dosage"
@@ -45,7 +49,9 @@
             />
           </div>
           <div class="field">
-            <label id="lbl-time" for="input-time">Vreme</label>
+            <label id="lbl-time" for="input-time" data-i18n="lblTime"
+              >Vreme</label
+            >
             <input type="time" id="input-time" required />
             <ul
               id="selected-times"
@@ -62,9 +68,12 @@
       </section>
 
       <section class="list-section">
-        <h2 id="list-title">Moji suplementi</h2>
+        <h2 id="list-title" data-i18n="listTitle">Moji suplementi</h2>
         <div class="list-controls">
-          <label for="supplement-search" class="sr-only"
+          <label
+            for="supplement-search"
+            class="sr-only"
+            data-i18n="searchSupplements"
             >Pretraži suplemente</label
           >
           <input
@@ -72,13 +81,18 @@
             id="supplement-search"
             placeholder="Pretraži suplemente"
           />
-          <label for="supplement-sort" class="sr-only"
+          <label
+            for="supplement-sort"
+            class="sr-only"
+            data-i18n="sortSupplements"
             >Sortiraj suplemente</label
           >
           <select id="supplement-sort">
-            <option value="name">Naziv A–Z</option>
-            <option value="time">Najranije vreme</option>
-            <option value="newest">Najnovije dodato</option>
+            <option value="name" data-i18n="sortName">Naziv A–Z</option>
+            <option value="time" data-i18n="sortTime">Najranije vreme</option>
+            <option value="newest" data-i18n="sortNewest">
+              Najnovije dodato
+            </option>
           </select>
         </div>
         <p id="empty-state" class="empty-state" hidden></p>
@@ -86,7 +100,7 @@
       </section>
 
       <section class="water-section">
-        <h2 id="water-title">Podsetnik za vodu 💧</h2>
+        <h2 id="water-title" data-i18n="waterTitle">Podsetnik za vodu 💧</h2>
         <div class="water-controls">
           <p id="water-text">
             <span id="water-count">0</span>

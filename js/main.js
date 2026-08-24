@@ -28,6 +28,22 @@ const translations = {
     fillFields: "Molimo popunite sva polja",
     addTime: "Dodaj vreme",
     removeTime: "Ukloni vreme",
+    searchSupplements: "Pretraži suplemente",
+    sortSupplements: "Sortiraj suplemente",
+    sortName: "Naziv A–Z",
+    sortTime: "Najranije vreme",
+    sortNewest: "Najnovije dodato",
+    emptySupplements: "Još nema dodatih suplemenata.",
+    emptySearch: "Nema suplemenata koji odgovaraju pretrazi.",
+    edit: "Izmeni",
+    save: "Sačuvaj",
+    cancel: "Otkaži",
+    delete: "Obriši",
+    duplicateSupplement: "Ovaj suplement već postoji.",
+    duplicateTime: "Ovo vreme je već dodato.",
+    dataSaveError: "Podaci nisu mogli biti sačuvani.",
+    reminderTitle: "Vreme je za suplement! 💊",
+    reminderBody: (name, dose) => `Uzmi svoj ${name} (${dose})`,
   },
   en: {
     mainTitle: "Supplement Tracker",
@@ -45,11 +61,40 @@ const translations = {
     fillFields: "Please fill in all fields",
     addTime: "Add time",
     removeTime: "Remove time",
+    searchSupplements: "Search supplements",
+    sortSupplements: "Sort supplements",
+    sortName: "Name A–Z",
+    sortTime: "Earliest time",
+    sortNewest: "Recently added",
+    emptySupplements: "No supplements have been added yet.",
+    emptySearch: "No supplements match the search.",
+    edit: "Edit",
+    save: "Save",
+    cancel: "Cancel",
+    delete: "Delete",
+    duplicateSupplement: "This supplement already exists.",
+    duplicateTime: "This time is already added.",
+    dataSaveError: "Data could not be saved.",
+    reminderTitle: "Time for your supplement! 💊",
+    reminderBody: (name, dose) => `Take ${name} (${dose})`,
   },
 };
 
-// 3. GLOBAL APPLICATION STATE (Data)
+const LANGUAGE_KEY = "supplement-tracker-language";
 let currentLang = "sr";
+try {
+  const storedLanguage = localStorage.getItem(LANGUAGE_KEY);
+  if (translations[storedLanguage]) currentLang = storedLanguage;
+} catch {
+  // Language preference is unavailable.
+}
+
+const t = (key, ...args) => {
+  const value = translations[currentLang]?.[key] ?? translations.sr[key] ?? key;
+  return typeof value === "function" ? value(...args) : value;
+};
+
+// 3. GLOBAL APPLICATION STATE (Data)
 const loadStoredData = (key, fallback) => {
   try {
     const value = localStorage.getItem(key);
@@ -115,35 +160,59 @@ const addTimeBtn = document.getElementById("add-time-btn");
 const selectedTimes = document.getElementById("selected-times");
 const supplementSearch = document.getElementById("supplement-search");
 const supplementSort = document.getElementById("supplement-sort");
+const supplementSearchLabel = document.querySelector(
+  'label[for="supplement-search"]',
+);
+const supplementSortLabel = document.querySelector(
+  'label[for="supplement-sort"]',
+);
+const supplementSortOptions = supplementSort.querySelectorAll("option");
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
 
 // Function for changing language
 function setLanguage(lang) {
-  currentLang = lang;
+  currentLang = translations[lang] ? lang : "sr";
+  document.documentElement.lang = currentLang;
+  try {
+    localStorage.setItem(LANGUAGE_KEY, currentLang);
+  } catch {
+    // Language preference cannot be persisted.
+  }
 
-  cancelEditBtn.hidden = false;
   // Updating all texts from the dictionary
-  mainTitle.textContent = translations[lang].mainTitle;
-  lblName.textContent = translations[lang].lblName;
-  lblDosage.textContent = translations[lang].lblDosage;
-  lblTime.textContent = translations[lang].lblTime;
-  addBtn.textContent = translations[lang].addBtn;
-  listTitle.textContent = translations[lang].listTitle;
-  waterTitle.textContent = translations[lang].waterTitle;
-  addWaterBtn.textContent = translations[lang].addWater;
-  cancelEditBtn.hidden = true;
-  resetWaterBtn.textContent = translations[lang].resetWater;
-  inputName.placeholder = translations[lang].placeholderName;
-  inputDosage.placeholder = translations[lang].placeholderDosage;
-  addTimeBtn.textContent = translations[lang].addTime;
+  mainTitle.textContent = t("mainTitle");
+  lblName.textContent = t("lblName");
+  lblDosage.textContent = t("lblDosage");
+  lblTime.textContent = t("lblTime");
+  addBtn.textContent = editingId === null ? t("addBtn") : t("save");
+  listTitle.textContent = t("listTitle");
+  waterTitle.textContent = t("waterTitle");
+  addWaterBtn.textContent = t("addWater");
+  resetWaterBtn.textContent = t("resetWater");
+  inputName.placeholder = t("placeholderName");
+  inputDosage.placeholder = t("placeholderDosage");
+  addTimeBtn.textContent = t("addTime");
+  supplementSearchLabel.textContent = t("searchSupplements");
+  supplementSearch.placeholder = t("searchSupplements");
+  supplementSortLabel.textContent = t("sortSupplements");
+  supplementSortOptions[0].textContent = t("sortName");
+  supplementSortOptions[1].textContent = t("sortTime");
+  supplementSortOptions[2].textContent = t("sortNewest");
+  cancelEditBtn.textContent = t("cancel");
 
   // Activating button in the header
-  document.getElementById("btn-sr").classList.toggle("active", lang === "sr");
-  document.getElementById("btn-en").classList.toggle("active", lang === "en");
+  document
+    .getElementById("btn-sr")
+    .classList.toggle("active", currentLang === "sr");
+  document
+    .getElementById("btn-en")
+    .classList.toggle("active", currentLang === "en");
 
   // Refresh water display because the suffix (čaša/glasses) has changed
   updateWaterUI();
+  renderSupplements();
+  renderSelectedTimes();
 }
 
 // Save to browser memory
@@ -153,11 +222,7 @@ function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
     localStorage.setItem("myWater", String(nextWaterCount));
     return true;
   } catch {
-    alert(
-      currentLang === "sr"
-        ? "Podaci nisu mogli biti sačuvani."
-        : "Data could not be saved.",
-    );
+    alert(t("dataSaveError"));
     return false;
   }
 }
@@ -180,14 +245,9 @@ function renderSupplements() {
     });
 
   emptyState.hidden = visibleSupplements.length > 0;
-  emptyState.textContent =
-    currentLang === "sr"
-      ? supplementFilter
-        ? "Nema suplemenata koji odgovaraju pretrazi."
-        : "Još nema dodatih suplemenata."
-      : supplementFilter
-        ? "No supplements match the search."
-        : "No supplements have been added yet.";
+  emptyState.textContent = supplementFilter
+    ? t("emptySearch")
+    : t("emptySupplements");
 
   visibleSupplements.forEach((sup) => {
     const card = document.createElement("div");
@@ -202,15 +262,12 @@ function renderSupplements() {
     metadata.textContent = `${sup.dosage} - ${sup.times.join(", ")}`;
     editButton.type = "button";
     editButton.className = "edit-btn";
-    editButton.textContent = currentLang === "sr" ? "Izmeni" : "Edit";
+    editButton.textContent = t("edit");
     editButton.addEventListener("click", () => startEditSupplement(sup.id));
     deleteButton.type = "button";
     deleteButton.className = "delete-btn";
     deleteButton.textContent = "×";
-    deleteButton.setAttribute(
-      "aria-label",
-      currentLang === "sr" ? `Obriši ${sup.name}` : `Delete ${sup.name}`,
-    );
+    deleteButton.setAttribute("aria-label", `${t("delete")}: ${sup.name}`);
     deleteButton.addEventListener("click", () => deleteSupplement(sup.id));
 
     details.append(name, document.createElement("br"), metadata);
@@ -232,7 +289,7 @@ function startEditSupplement(id) {
   inputTime.value = "";
   draftTimes = [...supplement.times];
   renderSelectedTimes();
-  addBtn.textContent = currentLang === "sr" ? "Sačuvaj" : "Save";
+  addBtn.textContent = t("save");
   cancelEditBtn.hidden = false;
   inputName.focus();
 }
@@ -260,8 +317,8 @@ function deleteSupplement(id) {
 // FUNCTION FOR SENDING NOTIFICATION
 function sendReminder(name, dose) {
   if (Notification.permission === "granted") {
-    new Notification("Vreme je za suplement! 💊", {
-      body: `Uzmi svoj ${name} (${dose})`,
+    new Notification(t("reminderTitle"), {
+      body: t("reminderBody", name, dose),
       icon: "https://cdn-icons-png.flaticon.com/512/822/822143.png",
     });
   }
@@ -283,7 +340,7 @@ function addSupplement() {
   }
 
   if (name === "" || dosage === "" || times.length === 0) {
-    alert(translations[currentLang].fillFields);
+    alert(t("fillFields"));
     return;
   }
 
@@ -293,11 +350,7 @@ function addSupplement() {
   );
 
   if (duplicate) {
-    alert(
-      currentLang === "sr"
-        ? "Ovaj suplement već postoji."
-        : "This supplement already exists.",
-    );
+    alert(t("duplicateSupplement"));
     return;
   }
 
@@ -338,7 +391,7 @@ addTimeBtn.addEventListener("click", () => {
   const time = inputTime.value;
 
   if (!time) {
-    alert(translations[currentLang].fillFields);
+    alert(t("fillFields"));
     return;
   }
 
@@ -348,11 +401,7 @@ addTimeBtn.addEventListener("click", () => {
 
   if (existingSupplement && editingId === null) {
     if (existingSupplement.times.includes(time)) {
-      alert(
-        currentLang === "sr"
-          ? "Ovo vreme je već dodato."
-          : "This time is already added.",
-      );
+      alert(t("duplicateTime"));
       return;
     }
 
@@ -370,11 +419,7 @@ addTimeBtn.addEventListener("click", () => {
   }
 
   if (draftTimes.includes(time)) {
-    alert(
-      currentLang === "sr"
-        ? "Ovo vreme je već dodato."
-        : "This time is already added.",
-    );
+    alert(t("duplicateTime"));
     return;
   }
 
@@ -402,10 +447,7 @@ function renderSelectedTimes() {
     removeButton.type = "button";
     removeButton.className = "remove-time-btn";
     removeButton.textContent = "×";
-    removeButton.setAttribute(
-      "aria-label",
-      `${translations[currentLang].removeTime}: ${time}`,
-    );
+    removeButton.setAttribute("aria-label", `${t("removeTime")}: ${time}`);
     removeButton.addEventListener("click", () => {
       draftTimes = draftTimes.filter((draftTime) => draftTime !== time);
       renderSelectedTimes();
