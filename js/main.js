@@ -88,6 +88,9 @@ let supplements = Array.isArray(storedSupplements)
   ? storedSupplements.map(normalizeSupplement).filter(Boolean)
   : [];
 let draftTimes = [];
+let editingId = null;
+let supplementFilter = "";
+let supplementSortMode = "name";
 const storedWater = loadStoredData("myWater", 0);
 let waterCount = Number.isFinite(Number(storedWater)) ? Number(storedWater) : 0;
 
@@ -106,9 +109,12 @@ const inputDosage = document.getElementById("input-dosage");
 const inputTime = document.getElementById("input-time");
 const supplementList = document.getElementById("supplement-list");
 const emptyState = document.getElementById("empty-state");
+const cancelEditBtn = document.getElementById("cancel-edit-btn");
 const waterCountDisplay = document.getElementById("water-count");
 const addTimeBtn = document.getElementById("add-time-btn");
 const selectedTimes = document.getElementById("selected-times");
+const supplementSearch = document.getElementById("supplement-search");
+const supplementSort = document.getElementById("supplement-sort");
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
 
@@ -116,6 +122,7 @@ const selectedTimes = document.getElementById("selected-times");
 function setLanguage(lang) {
   currentLang = lang;
 
+  cancelEditBtn.hidden = false;
   // Updating all texts from the dictionary
   mainTitle.textContent = translations[lang].mainTitle;
   lblName.textContent = translations[lang].lblName;
@@ -125,6 +132,7 @@ function setLanguage(lang) {
   listTitle.textContent = translations[lang].listTitle;
   waterTitle.textContent = translations[lang].waterTitle;
   addWaterBtn.textContent = translations[lang].addWater;
+  cancelEditBtn.hidden = true;
   resetWaterBtn.textContent = translations[lang].resetWater;
   inputName.placeholder = translations[lang].placeholderName;
   inputDosage.placeholder = translations[lang].placeholderDosage;
@@ -157,22 +165,45 @@ function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
 // Drawing cards on screen
 function renderSupplements() {
   supplementList.innerHTML = "";
-  emptyState.hidden = supplements.length > 0;
+  const visibleSupplements = [...supplements]
+    .filter((sup) =>
+      `${sup.name} ${sup.dosage}`
+        .toLowerCase()
+        .includes(supplementFilter.toLowerCase()),
+    )
+    .sort((first, second) => {
+      if (supplementSortMode === "time") {
+        return first.times[0].localeCompare(second.times[0]);
+      }
+      if (supplementSortMode === "newest") return second.id - first.id;
+      return first.name.localeCompare(second.name);
+    });
+
+  emptyState.hidden = visibleSupplements.length > 0;
   emptyState.textContent =
     currentLang === "sr"
-      ? "Još nema dodatih suplemenata."
-      : "No supplements have been added yet.";
+      ? supplementFilter
+        ? "Nema suplemenata koji odgovaraju pretrazi."
+        : "Još nema dodatih suplemenata."
+      : supplementFilter
+        ? "No supplements match the search."
+        : "No supplements have been added yet.";
 
-  supplements.forEach((sup) => {
+  visibleSupplements.forEach((sup) => {
     const card = document.createElement("div");
     card.className = "card";
     const details = document.createElement("div");
     const name = document.createElement("strong");
     const metadata = document.createElement("span");
+    const editButton = document.createElement("button");
     const deleteButton = document.createElement("button");
 
     name.textContent = sup.name;
     metadata.textContent = `${sup.dosage} - ${sup.times.join(", ")}`;
+    editButton.type = "button";
+    editButton.className = "edit-btn";
+    editButton.textContent = currentLang === "sr" ? "Izmeni" : "Edit";
+    editButton.addEventListener("click", () => startEditSupplement(sup.id));
     deleteButton.type = "button";
     deleteButton.className = "delete-btn";
     deleteButton.textContent = "×";
@@ -183,9 +214,38 @@ function renderSupplements() {
     deleteButton.addEventListener("click", () => deleteSupplement(sup.id));
 
     details.append(name, document.createElement("br"), metadata);
-    card.append(details, deleteButton);
+    const actions = document.createElement("div");
+    actions.className = "card-actions";
+    actions.append(editButton, deleteButton);
+    card.append(details, actions);
     supplementList.appendChild(card);
   });
+}
+
+function startEditSupplement(id) {
+  const supplement = supplements.find((sup) => sup.id === id);
+  if (!supplement) return;
+
+  editingId = id;
+  inputName.value = supplement.name;
+  inputDosage.value = supplement.dosage;
+  inputTime.value = "";
+  draftTimes = [...supplement.times];
+  renderSelectedTimes();
+  addBtn.textContent = currentLang === "sr" ? "Sačuvaj" : "Save";
+  cancelEditBtn.hidden = false;
+  inputName.focus();
+}
+
+function cancelEditSupplement() {
+  editingId = null;
+  draftTimes = [];
+  inputName.value = "";
+  inputDosage.value = "";
+  inputTime.value = "";
+  addBtn.textContent = translations[currentLang].addBtn;
+  cancelEditBtn.hidden = true;
+  renderSelectedTimes();
 }
 
 // Deleting a supplement
@@ -227,9 +287,12 @@ function addSupplement() {
     return;
   }
 
-  if (
-    supplements.some((sup) => sup.name.toLowerCase() === name.toLowerCase())
-  ) {
+  const duplicate = supplements.some(
+    (sup) =>
+      sup.name.toLowerCase() === name.toLowerCase() && sup.id !== editingId,
+  );
+
+  if (duplicate) {
     alert(
       currentLang === "sr"
         ? "Ovaj suplement već postoji."
@@ -238,14 +301,14 @@ function addSupplement() {
     return;
   }
 
-  const newSupplement = {
-    id: Date.now(),
-    name: name,
-    dosage: dosage,
-    times,
-  };
+  const nextSupplements = editingId
+    ? supplements.map((supplement) =>
+        supplement.id === editingId
+          ? { ...supplement, name, dosage, times }
+          : supplement,
+      )
+    : [...supplements, { id: Date.now(), name, dosage, times }];
 
-  const nextSupplements = [...supplements, newSupplement];
   if (!saveData(nextSupplements)) return;
   supplements = nextSupplements;
   renderSupplements();
@@ -255,6 +318,9 @@ function addSupplement() {
   inputDosage.value = "";
   inputTime.value = "";
   draftTimes = [];
+  editingId = null;
+  cancelEditBtn.hidden = true;
+  addBtn.textContent = translations[currentLang].addBtn;
   renderSelectedTimes();
 }
 
@@ -267,6 +333,7 @@ document
   .addEventListener("click", () => setLanguage("en"));
 
 addBtn.addEventListener("click", addSupplement);
+cancelEditBtn.addEventListener("click", cancelEditSupplement);
 addTimeBtn.addEventListener("click", () => {
   const time = inputTime.value;
 
@@ -279,7 +346,7 @@ addTimeBtn.addEventListener("click", () => {
     (sup) => sup.name.toLowerCase() === inputName.value.trim().toLowerCase(),
   );
 
-  if (existingSupplement) {
+  if (existingSupplement && editingId === null) {
     if (existingSupplement.times.includes(time)) {
       alert(
         currentLang === "sr"
@@ -314,6 +381,16 @@ addTimeBtn.addEventListener("click", () => {
   draftTimes.push(time);
   inputTime.value = "";
   renderSelectedTimes();
+});
+
+supplementSearch.addEventListener("input", (event) => {
+  supplementFilter = event.target.value.trim();
+  renderSupplements();
+});
+
+supplementSort.addEventListener("change", (event) => {
+  supplementSortMode = event.target.value;
+  renderSupplements();
 });
 
 function renderSelectedTimes() {
