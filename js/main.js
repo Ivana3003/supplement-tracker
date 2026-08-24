@@ -26,6 +26,8 @@ const translations = {
     placeholderName: "npr. Koenzim Q10",
     placeholderDosage: "npr. 100 mg",
     fillFields: "Molimo popunite sva polja",
+    addTime: "Dodaj vreme",
+    removeTime: "Ukloni vreme",
   },
   en: {
     mainTitle: "Supplement Tracker",
@@ -41,6 +43,8 @@ const translations = {
     placeholderName: "e.g. Coenzyme Q10",
     placeholderDosage: "e.g. 100 mg",
     fillFields: "Please fill in all fields",
+    addTime: "Add time",
+    removeTime: "Remove time",
   },
 };
 
@@ -56,7 +60,34 @@ const loadStoredData = (key, fallback) => {
 };
 
 const storedSupplements = loadStoredData("mySupplements", []);
-let supplements = Array.isArray(storedSupplements) ? storedSupplements : [];
+const normalizeSupplement = (supplement) => {
+  if (!supplement || typeof supplement !== "object") return null;
+
+  const legacyTimes =
+    typeof supplement.time === "string" ? [supplement.time] : [];
+  const times = Array.isArray(supplement.times)
+    ? supplement.times
+    : legacyTimes;
+  const validTimes = [
+    ...new Set(times.filter((time) => /^\d{2}:\d{2}$/.test(time))),
+  ];
+  const name = String(supplement.name || "").trim();
+  const dosage = String(supplement.dosage || "").trim();
+
+  if (!name || !dosage || validTimes.length === 0) return null;
+
+  return {
+    id: supplement.id ?? Date.now() + Math.random(),
+    name,
+    dosage,
+    times: validTimes,
+  };
+};
+
+let supplements = Array.isArray(storedSupplements)
+  ? storedSupplements.map(normalizeSupplement).filter(Boolean)
+  : [];
+let draftTimes = [];
 const storedWater = loadStoredData("myWater", 0);
 let waterCount = Number.isFinite(Number(storedWater)) ? Number(storedWater) : 0;
 
@@ -76,6 +107,8 @@ const inputTime = document.getElementById("input-time");
 const supplementList = document.getElementById("supplement-list");
 const emptyState = document.getElementById("empty-state");
 const waterCountDisplay = document.getElementById("water-count");
+const addTimeBtn = document.getElementById("add-time-btn");
+const selectedTimes = document.getElementById("selected-times");
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
 
@@ -95,6 +128,7 @@ function setLanguage(lang) {
   resetWaterBtn.textContent = translations[lang].resetWater;
   inputName.placeholder = translations[lang].placeholderName;
   inputDosage.placeholder = translations[lang].placeholderDosage;
+  addTimeBtn.textContent = translations[lang].addTime;
 
   // Activating button in the header
   document.getElementById("btn-sr").classList.toggle("active", lang === "sr");
@@ -138,7 +172,7 @@ function renderSupplements() {
     const deleteButton = document.createElement("button");
 
     name.textContent = sup.name;
-    metadata.textContent = `${sup.dosage} - ${sup.time}`;
+    metadata.textContent = `${sup.dosage} - ${sup.times.join(", ")}`;
     deleteButton.type = "button";
     deleteButton.className = "delete-btn";
     deleteButton.textContent = "×";
@@ -183,9 +217,12 @@ function updateWaterUI() {
 function addSupplement() {
   const name = inputName.value.trim();
   const dosage = inputDosage.value.trim();
-  const time = inputTime.value;
+  const times = [...draftTimes];
+  if (inputTime.value && !times.includes(inputTime.value)) {
+    times.push(inputTime.value);
+  }
 
-  if (name === "" || dosage === "" || time === "") {
+  if (name === "" || dosage === "" || times.length === 0) {
     alert(translations[currentLang].fillFields);
     return;
   }
@@ -205,7 +242,7 @@ function addSupplement() {
     id: Date.now(),
     name: name,
     dosage: dosage,
-    time: time,
+    times,
   };
 
   const nextSupplements = [...supplements, newSupplement];
@@ -217,6 +254,8 @@ function addSupplement() {
   inputName.value = "";
   inputDosage.value = "";
   inputTime.value = "";
+  draftTimes = [];
+  renderSelectedTimes();
 }
 
 // 6. EVENT LISTENERS
@@ -228,6 +267,76 @@ document
   .addEventListener("click", () => setLanguage("en"));
 
 addBtn.addEventListener("click", addSupplement);
+addTimeBtn.addEventListener("click", () => {
+  const time = inputTime.value;
+
+  if (!time) {
+    alert(translations[currentLang].fillFields);
+    return;
+  }
+
+  const existingSupplement = supplements.find(
+    (sup) => sup.name.toLowerCase() === inputName.value.trim().toLowerCase(),
+  );
+
+  if (existingSupplement) {
+    if (existingSupplement.times.includes(time)) {
+      alert(
+        currentLang === "sr"
+          ? "Ovo vreme je već dodato."
+          : "This time is already added.",
+      );
+      return;
+    }
+
+    const nextSupplements = supplements.map((supplement) =>
+      supplement.id === existingSupplement.id
+        ? { ...supplement, times: [...supplement.times, time].sort() }
+        : supplement,
+    );
+
+    if (!saveData(nextSupplements)) return;
+    supplements = nextSupplements;
+    renderSupplements();
+    inputTime.value = "";
+    return;
+  }
+
+  if (draftTimes.includes(time)) {
+    alert(
+      currentLang === "sr"
+        ? "Ovo vreme je već dodato."
+        : "This time is already added.",
+    );
+    return;
+  }
+
+  draftTimes.push(time);
+  inputTime.value = "";
+  renderSelectedTimes();
+});
+
+function renderSelectedTimes() {
+  selectedTimes.innerHTML = "";
+  draftTimes.forEach((time) => {
+    const item = document.createElement("li");
+    const removeButton = document.createElement("button");
+    item.textContent = time;
+    removeButton.type = "button";
+    removeButton.className = "remove-time-btn";
+    removeButton.textContent = "×";
+    removeButton.setAttribute(
+      "aria-label",
+      `${translations[currentLang].removeTime}: ${time}`,
+    );
+    removeButton.addEventListener("click", () => {
+      draftTimes = draftTimes.filter((draftTime) => draftTime !== time);
+      renderSelectedTimes();
+    });
+    item.append(removeButton);
+    selectedTimes.append(item);
+  });
+}
 
 addWaterBtn.addEventListener("click", () => {
   if (waterCount < 10) {
@@ -258,7 +367,7 @@ setInterval(() => {
     ":" +
     now.getMinutes().toString().padStart(2, "0");
   supplements.forEach((s) => {
-    if (s.time === currentTime) {
+    if (s.times.includes(currentTime)) {
       sendReminder(s.name, s.dosage);
     }
   });
