@@ -56,12 +56,31 @@
           <div class="field btn-field">
             <button id="add-btn" type="button">Dodaj</button>
             <button id="add-time-btn" type="button">Dodaj vreme</button>
+            <button id="cancel-edit-btn" type="button" hidden>Otkaži</button>
           </div>
         </div>
       </section>
 
       <section class="list-section">
         <h2 id="list-title">Moji suplementi</h2>
+        <div class="list-controls">
+          <label for="supplement-search" class="sr-only"
+            >Pretraži suplemente</label
+          >
+          <input
+            type="search"
+            id="supplement-search"
+            placeholder="Pretraži suplemente"
+          />
+          <label for="supplement-sort" class="sr-only"
+            >Sortiraj suplemente</label
+          >
+          <select id="supplement-sort">
+            <option value="name">Naziv A–Z</option>
+            <option value="time">Najranije vreme</option>
+            <option value="newest">Najnovije dodato</option>
+          </select>
+        </div>
         <p id="empty-state" class="empty-state" hidden></p>
         <div id="supplement-list" class="grid-container"></div>
       </section>
