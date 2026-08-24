@@ -100,7 +100,12 @@ header {
   display: grid;
   grid-template-columns: 2fr 1fr 1fr auto;
   gap: var(--space-m);
-  align-items: flex-end; /* Poravnanje na dno za dugme */
+  align-items: start;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
 }
 
 .field label {
@@ -118,6 +123,47 @@ input {
   transition: var(--transition);
 }
 
+#add-time-btn {
+  margin-top: 0;
+  padding: var(--space-s) var(--space-m);
+  background: white;
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+  border-radius: var(--radius);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.selected-times {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+  padding: 0;
+  list-style: none;
+}
+
+.selected-times li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) var(--space-s);
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  color: var(--text-main);
+  font-size: var(--font-size-small);
+}
+
+.remove-time-btn {
+  width: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--danger-color);
+  font-size: 1rem;
+}
+
 input:focus {
   outline: none;
   border-color: var(--primary-color);
@@ -133,6 +179,18 @@ button#add-btn {
   font-weight: var(--font-weight-bold);
   cursor: pointer;
   transition: var(--transition);
+}
+
+.btn-field {
+  display: flex;
+  align-self: end;
+  flex-direction: row;
+  gap: var(--space-xs);
+}
+
+.btn-field button {
+  flex: 1;
+  white-space: nowrap;
 }
 
 button#add-btn:hover {
