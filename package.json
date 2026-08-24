@@ -1,0 +1,22 @@
+{
+  "name": "supplement-tracker",
+  "version": "1.0.0",
+  "description": "Browser-based supplement and hydration tracker with reminders and bilingual support.",
+  "private": true,
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  },
+  "keywords": [
+    "supplement-tracker",
+    "hydration",
+    "reminders",
+    "javascript",
+    "localstorage"
+  ],
+  "author": "Ivana Tatić",
+  "license": "ISC",
+  "devDependencies": {
+    "serve": "^14.2.6"
+  }
+}
