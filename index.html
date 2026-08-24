@@ -28,24 +28,35 @@
         <div class="input-group">
           <div class="field">
             <label id="lbl-name" for="input-name">Naziv</label>
-            <input type="text" id="input-name" placeholder="npr. Koenzim Q10" />
+            <input
+              type="text"
+              id="input-name"
+              placeholder="npr. Koenzim Q10"
+              required
+            />
           </div>
           <div class="field">
             <label id="lbl-dosage" for="input-dosage">Doza</label>
-            <input type="text" id="input-dosage" placeholder="npr. 100 mg" />
+            <input
+              type="text"
+              id="input-dosage"
+              placeholder="npr. 100 mg"
+              required
+            />
           </div>
           <div class="field">
             <label id="lbl-time" for="input-time">Vreme</label>
-            <input type="time" id="input-time" />
+            <input type="time" id="input-time" required />
           </div>
           <div class="field btn-field">
-            <button id="add-btn">Dodaj</button>
+            <button id="add-btn" type="button">Dodaj</button>
           </div>
         </div>
       </section>
 
       <section class="list-section">
         <h2 id="list-title">Moji suplementi</h2>
+        <p id="empty-state" class="empty-state" hidden></p>
         <div id="supplement-list" class="grid-container"></div>
       </section>
 
@@ -56,8 +67,8 @@
             <span id="water-count">0</span>
           </p>
           <div class="water-buttons">
-            <button id="add-water">Dodaj čašu</button>
-            <button id="reset-water">Resetuj</button>
+            <button id="add-water" type="button">Dodaj čašu</button>
+            <button id="reset-water" type="button">Resetuj</button>
           </div>
         </div>
       </section>
