@@ -46,8 +46,19 @@ const translations = {
 
 // 3. GLOBAL APPLICATION STATE (Data)
 let currentLang = "sr";
-let supplements = JSON.parse(localStorage.getItem("mySupplements")) || [];
-let waterCount = parseInt(localStorage.getItem("myWater")) || 0;
+const loadStoredData = (key, fallback) => {
+  try {
+    const value = localStorage.getItem(key);
+    return value === null ? fallback : JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const storedSupplements = loadStoredData("mySupplements", []);
+let supplements = Array.isArray(storedSupplements) ? storedSupplements : [];
+const storedWater = loadStoredData("myWater", 0);
+let waterCount = Number.isFinite(Number(storedWater)) ? Number(storedWater) : 0;
 
 // 4. ELEMENT SELECTORS
 const mainTitle = document.getElementById("main-title");
@@ -63,6 +74,7 @@ const inputName = document.getElementById("input-name");
 const inputDosage = document.getElementById("input-dosage");
 const inputTime = document.getElementById("input-time");
 const supplementList = document.getElementById("supplement-list");
+const emptyState = document.getElementById("empty-state");
 const waterCountDisplay = document.getElementById("water-count");
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
@@ -93,33 +105,62 @@ function setLanguage(lang) {
 }
 
 // Save to browser memory
-function saveData() {
-  localStorage.setItem("mySupplements", JSON.stringify(supplements));
-  localStorage.setItem("myWater", waterCount);
+function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
+  try {
+    localStorage.setItem("mySupplements", JSON.stringify(nextSupplements));
+    localStorage.setItem("myWater", String(nextWaterCount));
+    return true;
+  } catch {
+    alert(
+      currentLang === "sr"
+        ? "Podaci nisu mogli biti sačuvani."
+        : "Data could not be saved.",
+    );
+    return false;
+  }
 }
 
 // Drawing cards on screen
 function renderSupplements() {
   supplementList.innerHTML = "";
+  emptyState.hidden = supplements.length > 0;
+  emptyState.textContent =
+    currentLang === "sr"
+      ? "Još nema dodatih suplemenata."
+      : "No supplements have been added yet.";
+
   supplements.forEach((sup) => {
     const card = document.createElement("div");
     card.className = "card";
-    card.innerHTML = `
-            <div>
-                <strong>${sup.name}</strong><br>
-                <span>${sup.dosage} - ${sup.time}</span>
-            </div>
-            <button onclick="deleteSupplement(${sup.id})" class="delete-btn">×</button>
-        `;
+    const details = document.createElement("div");
+    const name = document.createElement("strong");
+    const metadata = document.createElement("span");
+    const deleteButton = document.createElement("button");
+
+    name.textContent = sup.name;
+    metadata.textContent = `${sup.dosage} - ${sup.time}`;
+    deleteButton.type = "button";
+    deleteButton.className = "delete-btn";
+    deleteButton.textContent = "×";
+    deleteButton.setAttribute(
+      "aria-label",
+      currentLang === "sr" ? `Obriši ${sup.name}` : `Delete ${sup.name}`,
+    );
+    deleteButton.addEventListener("click", () => deleteSupplement(sup.id));
+
+    details.append(name, document.createElement("br"), metadata);
+    card.append(details, deleteButton);
     supplementList.appendChild(card);
   });
 }
 
 // Deleting a supplement
 function deleteSupplement(id) {
-  supplements = supplements.filter((sup) => sup.id !== id);
-  saveData();
-  renderSupplements();
+  const nextSupplements = supplements.filter((sup) => sup.id !== id);
+  if (saveData(nextSupplements)) {
+    supplements = nextSupplements;
+    renderSupplements();
+  }
 }
 
 // FUNCTION FOR SENDING NOTIFICATION
@@ -140,12 +181,23 @@ function updateWaterUI() {
 
 // Adding new supplement
 function addSupplement() {
-  const name = inputName.value;
-  const dosage = inputDosage.value;
+  const name = inputName.value.trim();
+  const dosage = inputDosage.value.trim();
   const time = inputTime.value;
 
   if (name === "" || dosage === "" || time === "") {
     alert(translations[currentLang].fillFields);
+    return;
+  }
+
+  if (
+    supplements.some((sup) => sup.name.toLowerCase() === name.toLowerCase())
+  ) {
+    alert(
+      currentLang === "sr"
+        ? "Ovaj suplement već postoji."
+        : "This supplement already exists.",
+    );
     return;
   }
 
@@ -156,8 +208,9 @@ function addSupplement() {
     time: time,
   };
 
-  supplements.push(newSupplement);
-  saveData();
+  const nextSupplements = [...supplements, newSupplement];
+  if (!saveData(nextSupplements)) return;
+  supplements = nextSupplements;
   renderSupplements();
 
   // Reset fields after input
@@ -177,7 +230,7 @@ document
 addBtn.addEventListener("click", addSupplement);
 
 addWaterBtn.addEventListener("click", () => {
-  if (waterCount < 20) {
+  if (waterCount < 10) {
     waterCount++;
     saveData();
     updateWaterUI();
