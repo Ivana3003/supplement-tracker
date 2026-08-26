@@ -205,10 +205,28 @@ function setLanguage(lang) {
   resetWaterBtn.textContent = t("resetWater");
   notificationBtn.textContent =
     "Notification" in window && Notification.permission === "granted"
-      ? t("remindersEnabled")
+      ? "🔔"
+      : "🔕";
+  const notificationState =
+    "Notification" in window && Notification.permission === "granted"
+      ? "enabled"
       : "Notification" in window && Notification.permission === "denied"
+        ? "blocked"
+        : "inactive";
+  const notificationLabel =
+    notificationState === "enabled"
+      ? t("remindersEnabled")
+      : notificationState === "blocked"
         ? t("remindersDenied")
         : t("enableReminders");
+  notificationBtn.className = `notification-btn is-${notificationState}`;
+  notificationBtn.setAttribute("aria-label", notificationLabel);
+  notificationBtn.setAttribute("title", notificationLabel);
+  notificationBtn.setAttribute(
+    "aria-pressed",
+    String(notificationState === "enabled"),
+  );
+  notificationBtn.disabled = notificationState === "blocked";
   inputName.placeholder = t("placeholderName");
   inputDosage.placeholder = t("placeholderDosage");
   addTimeBtn.textContent = t("addTime");
@@ -285,6 +303,7 @@ function renderSupplements() {
     editButton.type = "button";
     editButton.className = "edit-btn";
     editButton.textContent = t("edit");
+    editButton.setAttribute("aria-label", `${t("edit")}: ${sup.name}`);
     editButton.addEventListener("click", () => startEditSupplement(sup.id));
     deleteButton.type = "button";
     deleteButton.className = "delete-btn";
