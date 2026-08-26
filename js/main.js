@@ -1,16 +1,4 @@
-// 1. REQUEST PERMISSION FOR NOTIFICATIONS
-if ("Notification" in window) {
-  if (
-    Notification.permission !== "granted" &&
-    Notification.permission !== "denied"
-  ) {
-    Notification.requestPermission().then((permission) => {
-      console.log("Status notifikacija:", permission);
-    });
-  }
-}
-
-// 2. DICTIONARY WITH TRANSLATIONS (i18n)
+// 1. DICTIONARY WITH TRANSLATIONS (i18n)
 const translations = {
   sr: {
     mainTitle: "Pratilac suplemenata",
@@ -44,6 +32,12 @@ const translations = {
     dataSaveError: "Podaci nisu mogli biti sačuvani.",
     reminderTitle: "Vreme je za suplement! 💊",
     reminderBody: (name, dose) => `Uzmi svoj ${name} (${dose})`,
+    enableReminders: "Omogući podsetnike",
+    remindersEnabled: "Podsetnici su uključeni",
+    remindersDenied: "Podsetnici su blokirani u browseru",
+    notificationsUnavailable: "Ovaj browser ne podržava podsetnike.",
+    notificationPermissionError:
+      "Dozvola za podsetnike nije mogla biti zatražena.",
   },
   en: {
     mainTitle: "Supplement Tracker",
@@ -77,6 +71,11 @@ const translations = {
     dataSaveError: "Data could not be saved.",
     reminderTitle: "Time for your supplement! 💊",
     reminderBody: (name, dose) => `Take ${name} (${dose})`,
+    enableReminders: "Enable reminders",
+    remindersEnabled: "Reminders are enabled",
+    remindersDenied: "Reminders are blocked in the browser",
+    notificationsUnavailable: "This browser does not support reminders.",
+    notificationPermissionError: "Reminder permission could not be requested.",
   },
 };
 
@@ -137,9 +136,22 @@ let editingId = null;
 let supplementFilter = "";
 let supplementSortMode = "name";
 const storedWater = loadStoredData("myWater", 0);
-let waterCount = Number.isFinite(Number(storedWater)) ? Number(storedWater) : 0;
+const todayKey = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+const storedWaterState =
+  storedWater && typeof storedWater === "object"
+    ? storedWater
+    : { date: todayKey(), count: Number(storedWater) || 0 };
+let waterCount =
+  storedWaterState.date === todayKey() &&
+  Number.isFinite(Number(storedWaterState.count))
+    ? Math.min(Math.max(Number(storedWaterState.count), 0), 10)
+    : 0;
+const sentReminders = new Set();
 
-// 4. ELEMENT SELECTORS
+// 3. ELEMENT SELECTORS
 const mainTitle = document.getElementById("main-title");
 const lblName = document.getElementById("lbl-name");
 const lblDosage = document.getElementById("lbl-dosage");
@@ -167,6 +179,7 @@ const supplementSortLabel = document.querySelector(
   'label[for="supplement-sort"]',
 );
 const supplementSortOptions = supplementSort.querySelectorAll("option");
+const notificationBtn = document.getElementById("notification-btn");
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
 
@@ -190,6 +203,12 @@ function setLanguage(lang) {
   waterTitle.textContent = t("waterTitle");
   addWaterBtn.textContent = t("addWater");
   resetWaterBtn.textContent = t("resetWater");
+  notificationBtn.textContent =
+    "Notification" in window && Notification.permission === "granted"
+      ? t("remindersEnabled")
+      : "Notification" in window && Notification.permission === "denied"
+        ? t("remindersDenied")
+        : t("enableReminders");
   inputName.placeholder = t("placeholderName");
   inputDosage.placeholder = t("placeholderDosage");
   addTimeBtn.textContent = t("addTime");
@@ -219,7 +238,10 @@ function setLanguage(lang) {
 function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
   try {
     localStorage.setItem("mySupplements", JSON.stringify(nextSupplements));
-    localStorage.setItem("myWater", String(nextWaterCount));
+    localStorage.setItem(
+      "myWater",
+      JSON.stringify({ date: todayKey(), count: nextWaterCount }),
+    );
     return true;
   } catch {
     alert(t("dataSaveError"));
@@ -316,11 +338,29 @@ function deleteSupplement(id) {
 
 // FUNCTION FOR SENDING NOTIFICATION
 function sendReminder(name, dose) {
-  if (Notification.permission === "granted") {
-    new Notification(t("reminderTitle"), {
-      body: t("reminderBody", name, dose),
-      icon: "https://cdn-icons-png.flaticon.com/512/822/822143.png",
-    });
+  if ("Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(t("reminderTitle"), {
+        body: t("reminderBody", name, dose),
+        icon: "https://cdn-icons-png.flaticon.com/512/822/822143.png",
+      });
+    } catch {
+      // Notification creation can fail in restricted browser contexts.
+    }
+  }
+}
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) {
+    alert(t("notificationsUnavailable"));
+    return;
+  }
+
+  try {
+    await Notification.requestPermission();
+    setLanguage(currentLang);
+  } catch {
+    alert(t("notificationPermissionError"));
   }
 }
 
@@ -460,16 +500,16 @@ function renderSelectedTimes() {
 addWaterBtn.addEventListener("click", () => {
   if (waterCount < 10) {
     waterCount++;
-    saveData();
-    updateWaterUI();
+    if (saveData()) updateWaterUI();
   }
 });
 
 resetWaterBtn.addEventListener("click", () => {
   waterCount = 0;
-  saveData();
-  updateWaterUI();
+  if (saveData()) updateWaterUI();
 });
+
+notificationBtn.addEventListener("click", requestNotificationPermission);
 
 // 7. INITIALIZATION (Runs when page loads)
 // This ensures the app starts with correct data and language
@@ -477,17 +517,24 @@ setLanguage(currentLang);
 renderSupplements();
 updateWaterUI();
 
-// 8. CHECK ALARMS EVERY MINUTE
-setInterval(() => {
+function checkDueReminders() {
   const now = new Date();
-  // Extract hours and minutes in "HH:MM" format
   const currentTime =
     now.getHours().toString().padStart(2, "0") +
     ":" +
     now.getMinutes().toString().padStart(2, "0");
+
   supplements.forEach((s) => {
     if (s.times.includes(currentTime)) {
+      const reminderKey = `${todayKey()}-${s.id}-${currentTime}`;
+      if (sentReminders.has(reminderKey)) return;
+      sentReminders.add(reminderKey);
       sendReminder(s.name, s.dosage);
     }
   });
-}, 60000); // 60 seconds
+}
+
+setInterval(checkDueReminders, 60000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkDueReminders();
+});
