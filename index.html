@@ -20,10 +20,56 @@
           <span>|</span>
           <button id="btn-en" type="button">EN</button>
         </div>
+        <button id="logout-btn" type="button" class="danger" hidden>
+          Odjavi se
+        </button>
       </div>
     </header>
 
-    <main class="main-container">
+    <section id="auth-shell" class="auth-shell" aria-live="polite">
+      <div class="auth-card">
+        <h2 id="auth-title">Prijava / registracija</h2>
+        <p id="auth-status" class="auth-status">
+          Ulogujte se da biste pristupili svom kalendaru suplemenata.
+        </p>
+
+        <form id="auth-form" class="auth-form">
+          <label for="auth-email">Email</label>
+          <input
+            id="auth-email"
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            required
+          />
+
+          <label for="auth-password">Password</label>
+          <input
+            id="auth-password"
+            type="password"
+            name="password"
+            placeholder="********"
+            required
+          />
+
+          <div class="auth-actions">
+            <button id="login-btn" type="submit" data-mode="login">
+              Prijavi se
+            </button>
+            <button
+              id="register-btn"
+              type="button"
+              class="secondary"
+              data-mode="register"
+            >
+              Registruj se
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <main id="app-shell" class="main-container" hidden>
       <section class="input-section">
         <div class="input-group">
           <div class="field">
@@ -142,6 +188,18 @@
       </section>
     </main>
 
+    <script>
+      window.SUPPLEMENT_FIREBASE_CONFIG = {
+        apiKey: "AIzaSyCkkcljweJ4emIBrIxWDIR79cqS1vmueXU",
+        authDomain: "supplement-tracker-cb744.firebaseapp.com",
+        projectId: "supplement-tracker-cb744",
+        appId: "1:377963764145:web:ae2ada76afcc2916724590",
+        storageBucket: "supplement-tracker-cb744.firebasestorage.app",
+        messagingSenderId: "377963764145",
+      };
+    </script>
+    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js"></script>
     <script src="js/supplement-api.js"></script>
     <script src="js/main.js"></script>
   </body>

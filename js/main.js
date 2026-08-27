@@ -107,10 +107,267 @@ const t = (key, ...args) => {
   return typeof value === "function" ? value(...args) : value;
 };
 
+const AUTH_SESSION_KEY = "supplement-tracker-auth-session";
+let currentUser = null;
+
+function getFirebaseAuth() {
+  if (!window.firebase || !window.firebase.apps) return null;
+
+  const config = window.SUPPLEMENT_FIREBASE_CONFIG || {};
+  const hasRealValues = Boolean(
+    config.apiKey &&
+    config.apiKey !== "YOUR_API_KEY" &&
+    config.authDomain &&
+    config.authDomain !== "YOUR_PROJECT_ID.firebaseapp.com" &&
+    config.projectId &&
+    config.projectId !== "YOUR_PROJECT_ID" &&
+    config.appId &&
+    config.appId !== "YOUR_APP_ID",
+  );
+
+  if (!hasRealValues) return null;
+
+  if (!window.firebase.apps.length) {
+    window.firebase.initializeApp(config);
+  }
+
+  return window.firebase.auth();
+}
+
+function getStoredAuthSession() {
+  try {
+    const value = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!value) return null;
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveAuthSession(user) {
+  currentUser = user;
+  localStorage.setItem(
+    AUTH_SESSION_KEY,
+    JSON.stringify({
+      uid: user.uid || user.email,
+      email: user.email || "",
+      name: user.name || user.email || "User",
+    }),
+  );
+}
+
+function clearAuthSession() {
+  const previousUid = currentUser?.uid;
+  currentUser = null;
+  localStorage.removeItem(AUTH_SESSION_KEY);
+
+  if (previousUid) {
+    localStorage.removeItem(`user-${previousUid}-mySupplements`);
+    localStorage.removeItem(`user-${previousUid}-myWater`);
+  }
+}
+
+function syncAuthUiState(isAuthenticated) {
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) logoutBtn.hidden = !isAuthenticated;
+}
+
+function showAuthScreen(
+  message = "Ulogujte se da biste pristupili svom kalendaru suplemenata.",
+) {
+  const authShell = document.getElementById("auth-shell");
+  const appShell = document.getElementById("app-shell");
+  const authStatus = document.getElementById("auth-status");
+
+  if (authStatus) authStatus.textContent = message;
+  if (authShell) authShell.hidden = false;
+  if (appShell) appShell.hidden = true;
+  syncAuthUiState(false);
+}
+
+function showAppScreen() {
+  const authShell = document.getElementById("auth-shell");
+  const appShell = document.getElementById("app-shell");
+  if (authShell) authShell.hidden = true;
+  if (appShell) appShell.hidden = false;
+  syncAuthUiState(true);
+}
+
+async function handleAuthAction(mode) {
+  const emailInput = document.getElementById("auth-email");
+  const passwordInput = document.getElementById("auth-password");
+  const authStatus = document.getElementById("auth-status");
+
+  if (!emailInput || !passwordInput) return;
+
+  const email = emailInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (!email || !password) {
+    if (authStatus) authStatus.textContent = "Unesite email i password.";
+    return;
+  }
+
+  try {
+    const auth = getFirebaseAuth();
+
+    if (!auth && window.SUPPLEMENT_FIREBASE_CONFIG) {
+      const config = window.SUPPLEMENT_FIREBASE_CONFIG;
+      const hasPlaceholderValues = Boolean(
+        !config.apiKey ||
+        config.apiKey === "YOUR_API_KEY" ||
+        !config.authDomain ||
+        config.authDomain === "YOUR_PROJECT_ID.firebaseapp.com" ||
+        !config.projectId ||
+        config.projectId === "YOUR_PROJECT_ID" ||
+        !config.appId ||
+        config.appId === "YOUR_APP_ID",
+      );
+
+      if (hasPlaceholderValues && authStatus) {
+        authStatus.textContent =
+          "Dodaj stvarne Firebase vrednosti u konfiguraciji da bi auth radio.";
+      }
+    }
+
+    if (auth) {
+      const response =
+        mode === "register"
+          ? await auth.createUserWithEmailAndPassword(email, password)
+          : await auth.signInWithEmailAndPassword(email, password);
+
+      const user = {
+        uid: response.user.uid,
+        email: response.user.email,
+        name: response.user.displayName || response.user.email,
+      };
+
+      saveAuthSession(user);
+      showAppScreen();
+      const logoutBtn = document.getElementById("logout-btn");
+      if (logoutBtn) logoutBtn.hidden = false;
+      return;
+    }
+
+    if (mode === "register") {
+      const existingUser = getStoredAuthSession();
+      if (existingUser && existingUser.email === email) {
+        throw new Error("Korisnik sa ovim email-om već postoji.");
+      }
+    }
+
+    saveAuthSession({ uid: `local-${Date.now()}`, email, name: email });
+    showAppScreen();
+    const logoutBtn = document.getElementById("logout-btn");
+    if (logoutBtn) logoutBtn.hidden = false;
+    if (authStatus)
+      authStatus.textContent =
+        mode === "register"
+          ? "Registracija je uspešna."
+          : "Uspešno ste prijavljeni.";
+  } catch (error) {
+    const message = error?.message || "Neuspešna prijava.";
+    if (authStatus) authStatus.textContent = message;
+  }
+}
+
+function bindAuthControls() {
+  const authForm = document.getElementById("auth-form");
+  const loginBtn = document.getElementById("login-btn");
+  const registerBtn = document.getElementById("register-btn");
+  const logoutBtn = document.getElementById("logout-btn");
+
+  if (authForm) {
+    authForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      await handleAuthAction("login");
+    });
+  }
+
+  if (loginBtn) {
+    loginBtn.addEventListener("click", async () => {
+      await handleAuthAction("login");
+    });
+  }
+
+  if (registerBtn) {
+    registerBtn.addEventListener("click", async () => {
+      await handleAuthAction("register");
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      const auth = getFirebaseAuth();
+      if (auth) {
+        try {
+          await auth.signOut();
+        } catch {
+          // Ignore sign-out errors and continue with local session reset.
+        }
+      }
+
+      clearAuthSession();
+      showAuthScreen("Uspešno ste odjavljeni. Prijavite se ponovo.");
+      const emailInput = document.getElementById("auth-email");
+      const passwordInput = document.getElementById("auth-password");
+      if (emailInput) emailInput.value = "";
+      if (passwordInput) passwordInput.value = "";
+    });
+  }
+}
+
+function initializeAuthGate() {
+  bindAuthControls();
+
+  const auth = getFirebaseAuth();
+  const session = getStoredAuthSession();
+  const logoutBtn = document.getElementById("logout-btn");
+  if (logoutBtn) logoutBtn.hidden = !session;
+
+  if (auth) {
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        currentUser = {
+          uid: user.uid,
+          email: user.email,
+          name: user.displayName || user.email,
+        };
+        saveAuthSession(currentUser);
+        showAppScreen();
+        return;
+      }
+
+      clearAuthSession();
+      showAuthScreen(
+        "Ulogujte se da biste pristupili svom kalendaru suplemenata.",
+      );
+    });
+
+    return !!auth.currentUser;
+  }
+
+  if (session) {
+    currentUser = session;
+    showAppScreen();
+    return true;
+  }
+
+  showAuthScreen();
+  return false;
+}
+
 // 3. GLOBAL APPLICATION STATE (Data)
+const resolveStorageKey = (key) => {
+  const scope = currentUser?.uid ? `user-${currentUser.uid}-${key}` : key;
+  return scope;
+};
+
 const loadStoredData = (key, fallback) => {
   try {
-    const value = localStorage.getItem(key);
+    const storageKey = resolveStorageKey(key);
+    const value = localStorage.getItem(storageKey);
     return value === null ? fallback : JSON.parse(value);
   } catch {
     return fallback;
@@ -282,9 +539,12 @@ function setLanguage(lang) {
 // Save to browser memory
 function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
   try {
-    localStorage.setItem("mySupplements", JSON.stringify(nextSupplements));
+    const supplementKey = resolveStorageKey("mySupplements");
+    const waterKey = resolveStorageKey("myWater");
+
+    localStorage.setItem(supplementKey, JSON.stringify(nextSupplements));
     localStorage.setItem(
-      "myWater",
+      waterKey,
       JSON.stringify({ date: todayKey(), count: nextWaterCount }),
     );
     return true;
@@ -627,9 +887,16 @@ notificationBtn.addEventListener("click", requestNotificationPermission);
 
 // 7. INITIALIZATION (Runs when page loads)
 // This ensures the app starts with correct data and language
-setLanguage(currentLang);
-renderSupplements();
-updateWaterUI();
+function initializeApp() {
+  const isAuthenticated = initializeAuthGate();
+  if (!isAuthenticated) return;
+
+  setLanguage(currentLang);
+  renderSupplements();
+  updateWaterUI();
+}
+
+initializeApp();
 
 function checkDueReminders() {
   const now = new Date();
