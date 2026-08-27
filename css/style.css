@@ -325,6 +325,81 @@ button#add-btn:hover {
   box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
 }
 
+.api-search {
+  margin: var(--space-m) 0;
+  padding: var(--space-m);
+  background: var(--card-bg);
+  border: var(--border-standard);
+  border-radius: var(--radius);
+}
+
+.api-search h3 {
+  margin-bottom: var(--space-s);
+  color: var(--text-main);
+  font-size: 1rem;
+}
+
+.api-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-s);
+}
+
+.api-search-form input {
+  width: 100%;
+  padding: var(--space-m);
+  background: var(--input-bg);
+  color: var(--text-main);
+  border: var(--border-standard);
+  border-radius: var(--radius);
+}
+
+.api-search-form button,
+.api-result-card button {
+  width: auto;
+  padding: var(--space-s) var(--space-m);
+  background: var(--primary-color);
+  color: white;
+  border: var(--border-standard);
+  border-radius: var(--radius);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.api-search-status {
+  min-height: 1.25rem;
+  margin-top: var(--space-s);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.api-results {
+  display: grid;
+  gap: var(--space-s);
+}
+
+.api-result-card {
+  padding: var(--space-m);
+  background: var(--bg-color);
+  border: var(--border-standard);
+  border-radius: var(--radius);
+}
+
+.api-result-card strong {
+  display: block;
+  color: var(--text-main);
+}
+
+.api-result-card p {
+  margin-top: var(--space-xs);
+  color: var(--text-muted);
+  font-size: var(--font-size-small);
+}
+
+.api-result-card button {
+  margin-top: var(--space-s);
+}
+
 /* List Section */
 .grid-container {
   display: grid;
@@ -424,6 +499,10 @@ button#add-btn:hover {
   }
 
   .list-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .api-search-form {
     grid-template-columns: 1fr;
   }
 
