@@ -95,6 +95,27 @@
             </option>
           </select>
         </div>
+        <section class="api-search" aria-labelledby="api-search-title">
+          <h3 id="api-search-title">Pretraži bazu suplemenata</h3>
+          <form id="api-search-form" class="api-search-form">
+            <label for="api-search-input" class="sr-only"
+              >Pretraži bazu suplemenata</label
+            >
+            <input
+              type="search"
+              id="api-search-input"
+              placeholder="npr. vitamin D"
+            />
+            <button type="submit" id="api-search-btn">Pretraži</button>
+          </form>
+          <p
+            id="api-search-status"
+            class="api-search-status"
+            role="status"
+            aria-live="polite"
+          ></p>
+          <div id="api-results" class="api-results"></div>
+        </section>
         <p id="empty-state" class="empty-state" hidden></p>
         <div id="supplement-list" class="grid-container"></div>
       </section>
@@ -121,6 +142,7 @@
       </section>
     </main>
 
+    <script src="js/supplement-api.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

@@ -38,6 +38,13 @@ const translations = {
     notificationsUnavailable: "Ovaj browser ne podržava podsetnike.",
     notificationPermissionError:
       "Dozvola za podsetnike nije mogla biti zatražena.",
+    apiTitle: "Pretraži bazu suplemenata",
+    apiPlaceholder: "npr. vitamin D",
+    apiSearch: "Pretraži",
+    apiLoading: "Pretraživanje u toku...",
+    apiEmpty: "Nema pronađenih rezultata.",
+    apiError: "Pretraga trenutno nije dostupna.",
+    apiUse: "Koristi podatke",
   },
   en: {
     mainTitle: "Supplement Tracker",
@@ -76,6 +83,13 @@ const translations = {
     remindersDenied: "Reminders are blocked in the browser",
     notificationsUnavailable: "This browser does not support reminders.",
     notificationPermissionError: "Reminder permission could not be requested.",
+    apiTitle: "Search supplement database",
+    apiPlaceholder: "e.g. vitamin D",
+    apiSearch: "Search",
+    apiLoading: "Searching...",
+    apiEmpty: "No results found.",
+    apiError: "Search is currently unavailable.",
+    apiUse: "Use details",
   },
 };
 
@@ -180,6 +194,15 @@ const supplementSortLabel = document.querySelector(
 );
 const supplementSortOptions = supplementSort.querySelectorAll("option");
 const notificationBtn = document.getElementById("notification-btn");
+const apiSearchTitle = document.getElementById("api-search-title");
+const apiSearchForm = document.getElementById("api-search-form");
+const apiSearchInput = document.getElementById("api-search-input");
+const apiSearchButton = document.getElementById("api-search-btn");
+const apiSearchStatus = document.getElementById("api-search-status");
+const apiResults = document.getElementById("api-results");
+let apiRequestController = null;
+let apiSearchTimer = null;
+let apiProducts = [];
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
 
@@ -237,6 +260,10 @@ function setLanguage(lang) {
   supplementSortOptions[1].textContent = t("sortTime");
   supplementSortOptions[2].textContent = t("sortNewest");
   cancelEditBtn.textContent = t("cancel");
+  apiSearchTitle.textContent = t("apiTitle");
+  apiSearchInput.placeholder = t("apiPlaceholder");
+  apiSearchButton.textContent = t("apiSearch");
+  renderApiResults();
 
   // Activating button in the header
   document
@@ -264,6 +291,65 @@ function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
   } catch {
     alert(t("dataSaveError"));
     return false;
+  }
+}
+
+function renderApiResults() {
+  apiResults.innerHTML = "";
+  apiProducts.forEach((product) => {
+    const card = document.createElement("article");
+    card.className = "api-result-card";
+
+    const title = document.createElement("strong");
+    title.textContent = product.name;
+    card.append(title);
+
+    if (product.brand || product.quantity) {
+      const meta = document.createElement("p");
+      meta.textContent = [product.brand, product.quantity]
+        .filter(Boolean)
+        .join(" · ");
+      card.append(meta);
+    }
+
+    if (product.ingredients) {
+      const ingredients = document.createElement("p");
+      ingredients.textContent = product.ingredients;
+      card.append(ingredients);
+    }
+
+    const useButton = document.createElement("button");
+    useButton.type = "button";
+    useButton.textContent = t("apiUse");
+    useButton.addEventListener("click", () => {
+      inputName.value = product.name;
+      inputName.focus();
+    });
+    card.append(useButton);
+    apiResults.append(card);
+  });
+}
+
+async function searchSupplementsApi(query) {
+  if (apiRequestController) apiRequestController.abort();
+  apiRequestController = new AbortController();
+  apiSearchStatus.textContent = t("apiLoading");
+  apiSearchButton.disabled = true;
+
+  try {
+    apiProducts = await SupplementApi.search(
+      query,
+      apiRequestController.signal,
+    );
+    apiSearchStatus.textContent = apiProducts.length ? "" : t("apiEmpty");
+    renderApiResults();
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    apiProducts = [];
+    apiSearchStatus.textContent = t("apiError");
+    apiResults.innerHTML = "";
+  } finally {
+    apiSearchButton.disabled = false;
   }
 }
 
@@ -495,6 +581,15 @@ supplementSearch.addEventListener("input", (event) => {
 supplementSort.addEventListener("change", (event) => {
   supplementSortMode = event.target.value;
   renderSupplements();
+});
+
+apiSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  clearTimeout(apiSearchTimer);
+  apiSearchTimer = setTimeout(() => {
+    const query = apiSearchInput.value.trim();
+    if (query) searchSupplementsApi(query);
+  }, 250);
 });
 
 function renderSelectedTimes() {
