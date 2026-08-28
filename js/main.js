@@ -490,11 +490,24 @@ const apiSearchInput = document.getElementById("api-search-input");
 const apiSearchButton = document.getElementById("api-search-btn");
 const apiSearchStatus = document.getElementById("api-search-status");
 const apiResults = document.getElementById("api-results");
+const appErrorStatus = document.getElementById("app-error-status");
 let apiRequestController = null;
 let apiSearchTimer = null;
 let apiProducts = [];
 
 // 5. FUNCTIONS FOR LOGIC AND DISPLAY
+
+function showAppError(messageKey) {
+  if (!appErrorStatus) return;
+  appErrorStatus.textContent = t(messageKey);
+  appErrorStatus.hidden = false;
+}
+
+function clearAppError() {
+  if (!appErrorStatus) return;
+  appErrorStatus.textContent = "";
+  appErrorStatus.hidden = true;
+}
 
 // Function for changing language
 function setLanguage(lang) {
@@ -582,7 +595,7 @@ function saveData(nextSupplements = supplements, nextWaterCount = waterCount) {
     );
     return true;
   } catch {
-    alert(t("dataSaveError"));
+    showAppError("dataSaveError");
     return false;
   }
 }
@@ -754,7 +767,7 @@ function sendReminder(name, dose) {
 
 async function requestNotificationPermission() {
   if (!("Notification" in window)) {
-    alert(t("notificationsUnavailable"));
+    showAppError("notificationsUnavailable");
     return;
   }
 
@@ -762,7 +775,7 @@ async function requestNotificationPermission() {
     await Notification.requestPermission();
     setLanguage(currentLang);
   } catch {
-    alert(t("notificationPermissionError"));
+    showAppError("notificationPermissionError");
   }
 }
 
@@ -782,7 +795,7 @@ function addSupplement() {
   }
 
   if (name === "" || dosage === "" || times.length === 0) {
-    alert(t("fillFields"));
+    showAppError("fillFields");
     return;
   }
 
@@ -792,7 +805,7 @@ function addSupplement() {
   );
 
   if (duplicate) {
-    alert(t("duplicateSupplement"));
+    showAppError("duplicateSupplement");
     return;
   }
 
@@ -806,6 +819,7 @@ function addSupplement() {
 
   if (!saveData(nextSupplements)) return;
   supplements = nextSupplements;
+  clearAppError();
   renderSupplements();
 
   resetSupplementForm();
@@ -825,7 +839,7 @@ addTimeBtn.addEventListener("click", () => {
   const time = inputTime.value;
 
   if (!time) {
-    alert(t("fillFields"));
+    showAppError("fillFields");
     return;
   }
 
@@ -835,7 +849,7 @@ addTimeBtn.addEventListener("click", () => {
 
   if (existingSupplement && editingId === null) {
     if (existingSupplement.times.includes(time)) {
-      alert(t("duplicateTime"));
+      showAppError("duplicateTime");
       return;
     }
 
@@ -853,7 +867,7 @@ addTimeBtn.addEventListener("click", () => {
   }
 
   if (draftTimes.includes(time)) {
-    alert(t("duplicateTime"));
+    showAppError("duplicateTime");
     return;
   }
 
