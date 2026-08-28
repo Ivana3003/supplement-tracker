@@ -193,6 +193,18 @@ function showAppScreen() {
   syncAuthUiState(true);
 }
 
+function setAuthLoading(isLoading, message = "") {
+  const authForm = document.getElementById("auth-form");
+  const loginBtn = document.getElementById("login-btn");
+  const registerBtn = document.getElementById("register-btn");
+  const authStatus = document.getElementById("auth-status");
+
+  if (authForm) authForm.setAttribute("aria-busy", String(isLoading));
+  if (loginBtn) loginBtn.disabled = isLoading;
+  if (registerBtn) registerBtn.disabled = isLoading;
+  if (message && authStatus) authStatus.textContent = message;
+}
+
 async function handleAuthAction(mode) {
   const emailInput = document.getElementById("auth-email");
   const passwordInput = document.getElementById("auth-password");
@@ -207,6 +219,11 @@ async function handleAuthAction(mode) {
     if (authStatus) authStatus.textContent = "Unesite email i password.";
     return;
   }
+
+  setAuthLoading(
+    true,
+    mode === "register" ? "Registracija je u toku..." : "Prijava je u toku...",
+  );
 
   try {
     const auth = getFirebaseAuth();
@@ -268,6 +285,8 @@ async function handleAuthAction(mode) {
   } catch (error) {
     const message = error?.message || "Neuspešna prijava.";
     if (authStatus) authStatus.textContent = message;
+  } finally {
+    setAuthLoading(false);
   }
 }
 
