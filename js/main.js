@@ -1,3 +1,5 @@
+"use strict";
+
 // 1. DICTIONARY WITH TRANSLATIONS (i18n)
 const translations = {
   sr: {
@@ -712,15 +714,19 @@ function startEditSupplement(id) {
   inputName.focus();
 }
 
-function cancelEditSupplement() {
-  editingId = null;
-  draftTimes = [];
+function resetSupplementForm() {
   inputName.value = "";
   inputDosage.value = "";
   inputTime.value = "";
-  addBtn.textContent = translations[currentLang].addBtn;
+  draftTimes = [];
+  editingId = null;
+  addBtn.textContent = t("addBtn");
   cancelEditBtn.hidden = true;
   renderSelectedTimes();
+}
+
+function cancelEditSupplement() {
+  resetSupplementForm();
 }
 
 // Deleting a supplement
@@ -802,15 +808,7 @@ function addSupplement() {
   supplements = nextSupplements;
   renderSupplements();
 
-  // Reset fields after input
-  inputName.value = "";
-  inputDosage.value = "";
-  inputTime.value = "";
-  draftTimes = [];
-  editingId = null;
-  cancelEditBtn.hidden = true;
-  addBtn.textContent = translations[currentLang].addBtn;
-  renderSelectedTimes();
+  resetSupplementForm();
 }
 
 // 6. EVENT LISTENERS
