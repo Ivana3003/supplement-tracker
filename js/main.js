@@ -384,8 +384,7 @@ function initializeAuthGate() {
 
 // 3. GLOBAL APPLICATION STATE (Data)
 const resolveStorageKey = (key) => {
-  const scope = currentUser?.uid ? `user-${currentUser.uid}-${key}` : key;
-  return scope;
+  return AppHelpers.createStorageKey(key, currentUser?.uid);
 };
 
 const loadStoredData = (key, fallback) => {
@@ -441,16 +440,7 @@ function loadUserData() {
     : [];
 
   const storedWater = loadStoredData("myWater", 0);
-  const storedWaterState =
-    storedWater && typeof storedWater === "object"
-      ? storedWater
-      : { date: todayKey(), count: Number(storedWater) || 0 };
-
-  waterCount =
-    storedWaterState.date === todayKey() &&
-    Number.isFinite(Number(storedWaterState.count))
-      ? Math.min(Math.max(Number(storedWaterState.count), 0), 10)
-      : 0;
+  waterCount = AppHelpers.normalizeWaterState(storedWater, todayKey());
 
   sentReminders.clear();
 }
@@ -943,14 +933,15 @@ initializeApp();
 
 function checkDueReminders() {
   const now = new Date();
-  const currentTime =
-    now.getHours().toString().padStart(2, "0") +
-    ":" +
-    now.getMinutes().toString().padStart(2, "0");
+  const currentTime = AppHelpers.formatTime(now);
 
   supplements.forEach((s) => {
     if (s.times.includes(currentTime)) {
-      const reminderKey = `${todayKey()}-${s.id}-${currentTime}`;
+      const reminderKey = AppHelpers.createReminderKey(
+        todayKey(),
+        s.id,
+        currentTime,
+      );
       if (sentReminders.has(reminderKey)) return;
       sentReminders.add(reminderKey);
       sendReminder(s.name, s.dosage);

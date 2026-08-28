@@ -111,3 +111,7 @@ const SupplementApi = (() => {
 
   return { search };
 })();
+
+if (typeof module !== "undefined") {
+  module.exports = { SupplementApi };
+}
