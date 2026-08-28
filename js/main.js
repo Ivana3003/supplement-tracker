@@ -158,14 +158,13 @@ function saveAuthSession(user) {
 }
 
 function clearAuthSession() {
-  const previousUid = currentUser?.uid;
   currentUser = null;
   localStorage.removeItem(AUTH_SESSION_KEY);
-
-  if (previousUid) {
-    localStorage.removeItem(`user-${previousUid}-mySupplements`);
-    localStorage.removeItem(`user-${previousUid}-myWater`);
-  }
+  supplements = [];
+  waterCount = 0;
+  draftTimes = [];
+  editingId = null;
+  sentReminders.clear();
 }
 
 function syncAuthUiState(isAuthenticated) {
@@ -335,7 +334,10 @@ function initializeAuthGate() {
           name: user.displayName || user.email,
         };
         saveAuthSession(currentUser);
+        loadUserData();
         showAppScreen();
+        renderSupplements();
+        updateWaterUI();
         return;
       }
 
@@ -350,6 +352,7 @@ function initializeAuthGate() {
 
   if (session) {
     currentUser = session;
+    loadUserData();
     showAppScreen();
     return true;
   }
@@ -374,7 +377,6 @@ const loadStoredData = (key, fallback) => {
   }
 };
 
-const storedSupplements = loadStoredData("mySupplements", []);
 const normalizeSupplement = (supplement) => {
   if (!supplement || typeof supplement !== "object") return null;
 
@@ -399,28 +401,38 @@ const normalizeSupplement = (supplement) => {
   };
 };
 
-let supplements = Array.isArray(storedSupplements)
-  ? storedSupplements.map(normalizeSupplement).filter(Boolean)
-  : [];
+let supplements = [];
 let draftTimes = [];
 let editingId = null;
 let supplementFilter = "";
 let supplementSortMode = "name";
-const storedWater = loadStoredData("myWater", 0);
 const todayKey = () => {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 };
-const storedWaterState =
-  storedWater && typeof storedWater === "object"
-    ? storedWater
-    : { date: todayKey(), count: Number(storedWater) || 0 };
-let waterCount =
-  storedWaterState.date === todayKey() &&
-  Number.isFinite(Number(storedWaterState.count))
-    ? Math.min(Math.max(Number(storedWaterState.count), 0), 10)
-    : 0;
+let waterCount = 0;
 const sentReminders = new Set();
+
+function loadUserData() {
+  const storedSupplements = loadStoredData("mySupplements", []);
+  supplements = Array.isArray(storedSupplements)
+    ? storedSupplements.map(normalizeSupplement).filter(Boolean)
+    : [];
+
+  const storedWater = loadStoredData("myWater", 0);
+  const storedWaterState =
+    storedWater && typeof storedWater === "object"
+      ? storedWater
+      : { date: todayKey(), count: Number(storedWater) || 0 };
+
+  waterCount =
+    storedWaterState.date === todayKey() &&
+    Number.isFinite(Number(storedWaterState.count))
+      ? Math.min(Math.max(Number(storedWaterState.count), 0), 10)
+      : 0;
+
+  sentReminders.clear();
+}
 
 // 3. ELEMENT SELECTORS
 const mainTitle = document.getElementById("main-title");
