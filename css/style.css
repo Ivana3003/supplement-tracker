@@ -493,6 +493,12 @@ button#add-btn:hover {
     flex-direction: column;
     gap: var(--space-m);
   }
+
+  .header-container button {
+    min-height: 44px;
+    padding: var(--space-s) var(--space-m);
+  }
+
   .input-group {
     grid-template-columns: 1fr;
     gap: var(--space-s);
@@ -517,9 +523,14 @@ button#add-btn:hover {
     margin-left: 0;
   }
 
-  .card-actions .edit-btn,
-  .card-actions .delete-btn {
+  .card-actions .edit-btn {
     flex: 1;
+  }
+
+  .card-actions .delete-btn {
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
   }
 
   .btn-field {
