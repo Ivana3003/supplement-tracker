@@ -47,6 +47,23 @@ const translations = {
     apiEmpty: "Nema pronađenih rezultata.",
     apiError: "Pretraga trenutno nije dostupna.",
     apiUse: "Koristi podatke",
+    authTitle: "Prijava / registracija",
+    authPrompt: "Ulogujte se da biste pristupili svom kalendaru suplemenata.",
+    email: "Email",
+    password: "Lozinka",
+    login: "Prijavi se",
+    register: "Registruj se",
+    logout: "Odjavi se",
+    authValidation: "Unesite email i lozinku.",
+    registering: "Registracija je u toku...",
+    loggingIn: "Prijava je u toku...",
+    firebaseConfigError:
+      "Dodaj stvarne Firebase vrednosti u konfiguraciji da bi auth radio.",
+    userExists: "Korisnik sa ovim email-om već postoji.",
+    registerSuccess: "Registracija je uspešna.",
+    loginSuccess: "Uspešno ste prijavljeni.",
+    loginError: "Neuspešna prijava.",
+    logoutSuccess: "Uspešno ste odjavljeni. Prijavite se ponovo.",
   },
   en: {
     mainTitle: "Supplement Tracker",
@@ -92,6 +109,23 @@ const translations = {
     apiEmpty: "No results found.",
     apiError: "Search is currently unavailable.",
     apiUse: "Use details",
+    authTitle: "Sign in / register",
+    authPrompt: "Sign in to access your supplement calendar.",
+    email: "Email",
+    password: "Password",
+    login: "Sign in",
+    register: "Register",
+    logout: "Sign out",
+    authValidation: "Please enter your email and password.",
+    registering: "Registration in progress...",
+    loggingIn: "Signing in...",
+    firebaseConfigError:
+      "Add valid Firebase configuration values for authentication to work.",
+    userExists: "A user with this email already exists.",
+    registerSuccess: "Registration successful.",
+    loginSuccess: "You are successfully signed in.",
+    loginError: "Sign in failed.",
+    logoutSuccess: "You have been signed out. Please sign in again.",
   },
 };
 
@@ -174,9 +208,7 @@ function syncAuthUiState(isAuthenticated) {
   if (logoutBtn) logoutBtn.hidden = !isAuthenticated;
 }
 
-function showAuthScreen(
-  message = "Ulogujte se da biste pristupili svom kalendaru suplemenata.",
-) {
+function showAuthScreen(message = t("authPrompt")) {
   const authShell = document.getElementById("auth-shell");
   const appShell = document.getElementById("app-shell");
   const authStatus = document.getElementById("auth-status");
@@ -218,14 +250,11 @@ async function handleAuthAction(mode) {
   const password = passwordInput.value.trim();
 
   if (!email || !password) {
-    if (authStatus) authStatus.textContent = "Unesite email i password.";
+    if (authStatus) authStatus.textContent = t("authValidation");
     return;
   }
 
-  setAuthLoading(
-    true,
-    mode === "register" ? "Registracija je u toku..." : "Prijava je u toku...",
-  );
+  setAuthLoading(true, mode === "register" ? t("registering") : t("loggingIn"));
 
   try {
     const auth = getFirebaseAuth();
@@ -244,8 +273,7 @@ async function handleAuthAction(mode) {
       );
 
       if (hasPlaceholderValues && authStatus) {
-        authStatus.textContent =
-          "Dodaj stvarne Firebase vrednosti u konfiguraciji da bi auth radio.";
+        authStatus.textContent = t("firebaseConfigError");
       }
     }
 
@@ -271,7 +299,7 @@ async function handleAuthAction(mode) {
     if (mode === "register") {
       const existingUser = getStoredAuthSession();
       if (existingUser && existingUser.email === email) {
-        throw new Error("Korisnik sa ovim email-om već postoji.");
+        throw new Error(t("userExists"));
       }
     }
 
@@ -281,11 +309,9 @@ async function handleAuthAction(mode) {
     if (logoutBtn) logoutBtn.hidden = false;
     if (authStatus)
       authStatus.textContent =
-        mode === "register"
-          ? "Registracija je uspešna."
-          : "Uspešno ste prijavljeni.";
+        mode === "register" ? t("registerSuccess") : t("loginSuccess");
   } catch (error) {
-    const message = error?.message || "Neuspešna prijava.";
+    const message = error?.message || t("loginError");
     if (authStatus) authStatus.textContent = message;
   } finally {
     setAuthLoading(false);
@@ -329,7 +355,7 @@ function bindAuthControls() {
       }
 
       clearAuthSession();
-      showAuthScreen("Uspešno ste odjavljeni. Prijavite se ponovo.");
+      showAuthScreen(t("logoutSuccess"));
       const emailInput = document.getElementById("auth-email");
       const passwordInput = document.getElementById("auth-password");
       if (emailInput) emailInput.value = "";
@@ -363,9 +389,7 @@ function initializeAuthGate() {
       }
 
       clearAuthSession();
-      showAuthScreen(
-        "Ulogujte se da biste pristupili svom kalendaru suplemenata.",
-      );
+      showAuthScreen(t("authPrompt"));
     });
 
     return !!auth.currentUser;
@@ -556,6 +580,26 @@ function setLanguage(lang) {
   apiSearchTitle.textContent = t("apiTitle");
   apiSearchInput.placeholder = t("apiPlaceholder");
   apiSearchButton.textContent = t("apiSearch");
+  const authTitle = document.getElementById("auth-title");
+  const authStatus = document.getElementById("auth-status");
+  const authEmailLabel = document.getElementById("auth-email-label");
+  const authPasswordLabel = document.getElementById("auth-password-label");
+  const authEmailInput = document.getElementById("auth-email");
+  const authPasswordInput = document.getElementById("auth-password");
+  const loginButton = document.getElementById("login-btn");
+  const registerButton = document.getElementById("register-btn");
+  const logoutButton = document.getElementById("logout-btn");
+  if (authTitle) authTitle.textContent = t("authTitle");
+  if (authStatus && !authStatus.dataset.messageKey) {
+    authStatus.textContent = t("authPrompt");
+  }
+  if (authEmailLabel) authEmailLabel.textContent = t("email");
+  if (authPasswordLabel) authPasswordLabel.textContent = t("password");
+  if (authEmailInput) authEmailInput.placeholder = "you@example.com";
+  if (authPasswordInput) authPasswordInput.placeholder = "********";
+  if (loginButton) loginButton.textContent = t("login");
+  if (registerButton) registerButton.textContent = t("register");
+  if (logoutButton) logoutButton.textContent = t("logout");
   renderApiResults();
 
   // Activating button in the header
@@ -921,10 +965,10 @@ notificationBtn.addEventListener("click", requestNotificationPermission);
 // 7. INITIALIZATION (Runs when page loads)
 // This ensures the app starts with correct data and language
 function initializeApp() {
+  setLanguage(currentLang);
   const isAuthenticated = initializeAuthGate();
   if (!isAuthenticated) return;
 
-  setLanguage(currentLang);
   renderSupplements();
   updateWaterUI();
 }

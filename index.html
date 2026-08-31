@@ -15,14 +15,20 @@
       property="og:description"
       content="A supplement and hydration tracker with Firebase authentication, browser reminders, bilingual support, and user-scoped local storage."
     />
-    <meta property="og:url" content="https://it-supplement-tracker.netlify.app/" />
+    <meta
+      property="og:url"
+      content="https://it-supplement-tracker.netlify.app/"
+    />
     <meta
       property="og:image"
       content="https://it-supplement-tracker.netlify.app/screenshot.png"
     />
     <meta property="og:image:width" content="1104" />
     <meta property="og:image:height" content="1134" />
-    <meta property="og:image:alt" content="Supplement Tracker application interface" />
+    <meta
+      property="og:image:alt"
+      content="Supplement Tracker application interface"
+    />
     <title>Supplement Tracker</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="icon" type="image/png" href="images/pills.png" />
@@ -62,7 +68,7 @@
         </p>
 
         <form id="auth-form" class="auth-form">
-          <label for="auth-email">Email</label>
+          <label id="auth-email-label" for="auth-email">Email</label>
           <input
             id="auth-email"
             type="email"
@@ -71,7 +77,7 @@
             required
           />
 
-          <label for="auth-password">Password</label>
+          <label id="auth-password-label" for="auth-password">Password</label>
           <input
             id="auth-password"
             type="password"
