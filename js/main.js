@@ -290,6 +290,9 @@ async function handleAuthAction(mode) {
       };
 
       saveAuthSession(user);
+      if (authStatus)
+        authStatus.textContent =
+          mode === "register" ? t("registerSuccess") : t("loginSuccess");
       showAppScreen();
       const logoutBtn = document.getElementById("logout-btn");
       if (logoutBtn) logoutBtn.hidden = false;
